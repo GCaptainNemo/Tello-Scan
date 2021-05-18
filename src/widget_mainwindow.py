@@ -11,7 +11,9 @@ import threading
 import os
 import socket
 from widget_control_tello import TelloControllerWidget
+from widget_path_planning import PathPlanningWidget
 from tello import Tello
+from utils import *
 
 
 class MainWindow(QtWidgets.QWidget):
@@ -21,11 +23,16 @@ class MainWindow(QtWidgets.QWidget):
         self.setWindowTitle("Tello Scan")
         self.tello_obj = Tello('', 8889)
         self.control_widget = TelloControllerWidget(self.tello_obj, self)
+        self.path_widget = PathPlanningWidget()
         self.set_layout()
 
     def set_layout(self):
+        self.hsplitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        self.hsplitter.addWidget(self.path_widget)
+        self.hsplitter.addWidget(self.control_widget)
         hlayout = QtWidgets.QHBoxLayout(self)
-        hlayout.addWidget(self.control_widget)
+        # hlayout.addWidget(self.control_widget)
+        hlayout.addWidget(self.hsplitter)
         self.setLayout(hlayout)
 
     def closeEvent(self, event):
@@ -40,21 +47,15 @@ class MainWindow(QtWidgets.QWidget):
                                                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
                                                QtWidgets.QMessageBox.No)
         if reply == QtWidgets.QMessageBox.Yes:
-            # self.control_widget.thread_get_video.join()
-            # self.control_widget.thread_send_command.join()
+            stop_thread(self.control_widget.thread_get_video)
+            stop_thread(self.control_widget.thread_send_command)
+            stop_thread(self.tello_obj.receive_thread)
+            stop_thread(self.tello_obj.receive_video_thread)
             self.control_widget.stop_event.set()
             del self.tello_obj
-            # self.close()
             self.deleteLater()
-            os._exit(0)
-            # del self.control_widget.thread_send_command
-            # sys.exit()
         else:
             event.ignore()
-
-class PathPlanningWidget(QtWidgets.QWidget):
-    def __init__(self):
-        super(PathPlanningWidget, self).__init__()
 
 
 class SavephotosWidget(QtWidgets.QWidget):

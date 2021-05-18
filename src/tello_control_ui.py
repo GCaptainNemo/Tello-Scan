@@ -199,7 +199,8 @@ class TelloUI:
         self.degree_bar.set(30)
         self.degree_bar.pack(side="right")
 
-        self.btn_distance = tki.Button(panel, text="Reset Degree", relief="raised", command=self.updateDegreebar)
+        self.btn_distance = tki.Button(panel, text="Reset Degree", relief="raised",
+                                       command=self.updateDegreebar)
         self.btn_distance.pack(side="right", fill="both",
                                expand="yes", padx=10, pady=5)
 
