@@ -21,9 +21,10 @@ class TelloControllerWidget(QtWidgets.QWidget):
         self.stop_event.clear()
         self.distance = 0.25  # default distance for 'move' cmd
         self.degree = 0  # default degree for 'cw' or 'ccw' cmd
+        self.is_setpixmap = False
 
         # two thread: one to receive videos, another to send command
-        self.thread_get_video = threading.Thread(target=self.video_loop, args=())
+        self.thread_get_video = threading.Thread(target=self.video_loop)
         self.thread_get_video.start()
         self.thread_send_command = threading.Thread(target=self._sending_command)
         self.thread_send_command.start()
@@ -33,11 +34,11 @@ class TelloControllerWidget(QtWidgets.QWidget):
 
     def set_ui(self):
         vlayout = QtWidgets.QVBoxLayout(self)
-        self.label_show = QtWidgets.QLabel("")
-        self.label_show.setScaledContents(True)
-        # self.subwidget = QtWidgets.QWidget()
-
-        vlayout.addWidget(self.label_show)
+        # self.label_show = QtWidgets.QLabel("")
+        # self.label_show.setScaledContents(True)
+        # # self.subwidget = QtWidgets.QWidget()
+        #
+        # vlayout.addWidget(self.label_show)
         self.text_widget = QtWidgets.QTextEdit()
         vlayout.addWidget(self.text_widget)
         self.set_readme()
@@ -46,23 +47,19 @@ class TelloControllerWidget(QtWidgets.QWidget):
         hlayout_3 = QtWidgets.QHBoxLayout()
         hlayout_4 = QtWidgets.QHBoxLayout()
 
-        self.radio_btn1 = QtWidgets.QRadioButton("start")
-        self.radio_btn1.setChecked(True)
-        self.radio_btn1.toggled.connect(lambda: self.btnstate(self.radio_btn1))
-        self.radio_btn2 = QtWidgets.QRadioButton("stop")
-        self.radio_btn2.toggled.connect(lambda: self.btnstate(self.radio_btn2))
-        self.snap_btn = QtWidgets.QPushButton("Snapshot")
-        self.snap_btn.clicked.connect(self.snap_shot)
+        self.show_btn = QtWidgets.QPushButton("Show")
+        self.close_btn = QtWidgets.QPushButton("Close")
         self.take_off_btn = QtWidgets.QPushButton("Take off")
-        self.land_btn = QtWidgets.QPushButton("land")
+        self.land_btn = QtWidgets.QPushButton("Land")
+        self.show_btn.clicked.connect(self.tello_show)
+        self.close_btn.clicked.connect(self.tello_close)
+
         self.take_off_btn.clicked.connect(self.tello_take_off)
         self.land_btn.clicked.connect(self.tello_landing)
-        hlayout_1.addWidget(self.radio_btn1)
-        hlayout_1.addWidget(self.radio_btn2)
+        hlayout_1.addWidget(self.show_btn)
+        hlayout_1.addWidget(self.close_btn)
         hlayout_1.addWidget(self.take_off_btn)
         hlayout_1.addWidget(self.land_btn)
-        hlayout_1.addWidget(self.snap_btn)
-        # vlayout.addWidget(self.subwidget)
 
         self.flip_forward_btn = QtWidgets.QPushButton("Flip forward")
         self.flip_backward_btn = QtWidgets.QPushButton("Flip backward")
@@ -80,25 +77,24 @@ class TelloControllerWidget(QtWidgets.QWidget):
         vlayout.addLayout(hlayout_2)
 
         self.dist_label = QtWidgets.QLabel("distance: 0.25m")
-        self.slider_dist = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
-        self.slider_dist.setRange(25, 500)  # 3
-        self.slider_dist.valueChanged.connect(self.on_change_dist)
-        self.dist_button = QtWidgets.QPushButton("ok")
+        self.dist_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
+        self.dist_slider.setRange(25, 500)  # 3
+        self.dist_slider.valueChanged.connect(self.on_change_dist)
+        self.dst_button = QtWidgets.QPushButton("ok")
 
         hlayout_3.addWidget(self.dist_label)
-        hlayout_3.addWidget(self.slider_dist)
-        hlayout_3.addWidget(self.dist_button)
-        self.dist_button.clicked.connect(self.confirm_dist)
-
+        hlayout_3.addWidget(self.dist_slider)
+        hlayout_3.addWidget(self.dst_button)
+        self.dst_button.clicked.connect(self.confirm_dst)
         self.degree_label = QtWidgets.QLabel("degree: 0°")
-        self.slider_degree = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
-        self.slider_degree.setRange(0, 360)  # 3
-        self.slider_degree.valueChanged.connect(self.on_change_degree)
+        self.degree_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
+        self.degree_slider.setRange(0, 360)  # 3
+        self.degree_slider.valueChanged.connect(self.on_change_degree)
         self.degree_button = QtWidgets.QPushButton("ok")
         self.degree_button.clicked.connect(self.confirm_degree)
 
         hlayout_4.addWidget(self.degree_label)
-        hlayout_4.addWidget(self.slider_degree)
+        hlayout_4.addWidget(self.degree_slider)
         hlayout_4.addWidget(self.degree_button)
 
         vlayout.addLayout(hlayout_3)
@@ -107,7 +103,8 @@ class TelloControllerWidget(QtWidgets.QWidget):
 
     def set_readme(self):
         text = " This Controller map keyboard inputs to Tello control commands." \
-               " Adjust the trackbar to reset distance and degree parameter\n"\
+               " Adjust the trackbar to reset distance and degree parameter\n\n"\
+               " ---------------------------------------------------------\n"\
                "W - Move Tello Up\n" \
                "S - Move Tello Down\n" \
                "A - Rotate Tello Counter-Clockwise\n" \
@@ -121,21 +118,21 @@ class TelloControllerWidget(QtWidgets.QWidget):
 
     def on_change_dist(self):
         try:
-            self.dist_label.setText("distance:" + str(float(self.slider_dist.value()) / 100) + "m")
+            self.dist_label.setText("distance:" + str(float(self.dist_slider.value()) / 100) + "m")
         except Exception as e:
             print(e)
 
     def on_change_degree(self):
         try:
-            self.degree_label.setText("degree:" + str(self.slider_degree.value()) + "°")
+            self.degree_label.setText("degree:" + str(self.degree_slider.value()) + "°")
         except Exception as e:
             print(e)
 
     def confirm_degree(self):
-        self.degree = self.slider_degree.value()
+        self.degree = self.degree_slider.value()
 
-    def confirm_dist(self):
-        self.distance = float(self.slider_dist.value()) / 100
+    def confirm_dst(self):
+        self.distance = float(self.dist_slider.value()) / 100
         print "self.distance = ", self.distance
 
     def keyPressEvent(self, event):
@@ -158,30 +155,30 @@ class TelloControllerWidget(QtWidgets.QWidget):
         elif event.key() == QtCore.Qt.Key_Enter:
             self.on_keypress_enter()
 
-    def btnstate(self, btn):
-        if btn.text() == "start":
-            # self.stop_event.clear()
-            self.tello_obj.video_freeze(False)
-            # text ="[Info] stream on\n"
-            # self.logger_text += text
-            # self.text_widget.setText(self.logger_text)
-        elif btn.text() == "stop":
-            self.tello_obj.video_freeze(True)
-
-            # text = "[Info] stream off\n"
-            # self.logger_text += text
-            # self.text_widget.setText(self.logger_text)
+    def tello_show(self):
+        print("in tello show")
+        self.show_video_widget = ShowVideoWindow()
+        self.show_video_widget.signal_snap_shot.connect(self.snap_shot)
+        self.show_video_widget.signal_freeze.connect(self.freeze_videos)
+        self.show_video_widget.show()
+        self.is_setpixmap = True
 
     def snap_shot(self):
-        try:
-            ts = datetime.datetime.now()
-            filename = "{}.jpg".format(ts.strftime("%Y-%m-%d_%H-%M-%S"))
-            p = os.path.sep.join((self.output_path, filename))
-            cv2.imwrite(p, cv2.cvtColor(self.frame, cv2.COLOR_RGB2BGR))
-            # self.text_widget.setText("[Info] saved {} \n ".format(filename))
-            print("[INFO] saved {}".format(filename))
-        except Exception as e:
-            print e
+        ts = datetime.datetime.now()
+        filename = "{}.jpg".format(ts.strftime("%Y-%m-%d_%H-%M-%S"))
+        p = os.path.sep.join((self.output_path, filename))
+        cv2.imwrite(p, cv2.cvtColor(self.frame, cv2.COLOR_RGB2BGR))
+        print("[INFO] saved {}".format(filename))
+
+    def freeze_videos(self, opt):
+        if opt == "Start":
+            self.tello_obj.video_freeze(False)
+        elif opt == "Stop":
+            self.tello_obj.video_freeze(True)
+
+    def tello_close(self):
+        self.show_video_widget.close()
+        self.is_setpixmap = False
 
     def _sending_command(self):
         """
@@ -198,12 +195,12 @@ class TelloControllerWidget(QtWidgets.QWidget):
                 if self.frame is None or self.frame.size == 0:
                     time.sleep(0.1)
                     continue
-                # if not self.stop_event.is_set():
-                img = QtGui.QImage(self.frame,
-                                   self.frame.shape[1],
-                                   self.frame.shape[0],
-                                   QtGui.QImage.Format_RGB888)
-                self.label_show.setPixmap(QtGui.QPixmap.fromImage(img))
+                if self.is_setpixmap:
+                    img = QtGui.QImage(self.frame,
+                                       self.frame.shape[1],
+                                       self.frame.shape[0],
+                                       QtGui.QImage.Format_RGB888)
+                    self.show_video_widget.label_show.setPixmap(QtGui.QPixmap.fromImage(img))
                 time.sleep(0.05)
         except RuntimeError, e:
             print("[INFO] caught a RuntimeError")
@@ -264,7 +261,43 @@ class TelloControllerWidget(QtWidgets.QWidget):
         return self.tello_obj.flip('b')
 
 
-class ChildWindow(QtWidgets.QWidget):
+class ShowVideoWindow(QtWidgets.QWidget):
+    signal_freeze = QtCore.pyqtSignal(str)
+    signal_snap_shot = QtCore.pyqtSignal()
     def __init__(self):
-        a = 1
+        super(ShowVideoWindow, self).__init__()
+        self.set_ui()
+        # self.setWindowFlags(
+        #     QtCore.Qt.WindowMinimizeButtonHint |
+        #     QtCore.Qt.WindowMaximizeButtonHint)
 
+    def set_ui(self):
+        self.label_show = QtWidgets.QLabel("")
+        self.label_show.setScaledContents(True)
+        # self.subwidget = QtWidgets.QWidget()
+        self.radio_btn1 = QtWidgets.QRadioButton("Start")
+        self.radio_btn1.setChecked(True)
+        self.radio_btn1.toggled.connect(lambda: self.btnstate(self.radio_btn1))
+        self.radio_btn2 = QtWidgets.QRadioButton("Stop")
+        self.radio_btn2.toggled.connect(lambda: self.btnstate(self.radio_btn2))
+        self.snap_btn = QtWidgets.QPushButton("Snapshot")
+        self.snap_btn.clicked.connect(self.snap_shot)
+        vlayout = QtWidgets.QVBoxLayout()
+        vlayout.addWidget(self.label_show)
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(self.radio_btn1)
+        hlayout.addWidget(self.radio_btn2)
+        hlayout.addWidget(self.snap_btn)
+        vlayout.addLayout(hlayout)
+        self.setLayout(vlayout)
+        # self.label_show.setFixedSize(self.label_show.size())
+
+    def snap_shot(self):
+        try:
+            self.signal_snap_shot.emit()
+
+        except Exception as e:
+            print e
+
+    def btnstate(self, btn):
+        self.signal_freeze.emit(btn.text())

@@ -7,7 +7,6 @@ import libh264decoder
 
 class Tello:
     """Wrapper class to interact with the Tello drone."""
-
     def __init__(self, local_ip, local_port, imperial=False, command_timeout=.3, tello_ip='192.168.10.1',
                  tello_port=8889):
         """

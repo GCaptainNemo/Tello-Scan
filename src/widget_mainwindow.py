@@ -28,7 +28,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def set_layout(self):
         self.hsplitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        self.hsplitter.addWidget(self.path_widget)
+        # self.hsplitter.addWidget(self.path_widget)
         self.hsplitter.addWidget(self.control_widget)
         hlayout = QtWidgets.QHBoxLayout(self)
         # hlayout.addWidget(self.control_widget)
