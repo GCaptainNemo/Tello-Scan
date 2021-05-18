@@ -19,7 +19,6 @@ from utils import *
 class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
-        self.showMaximized()
         self.setWindowTitle("Tello Scan")
         self.tello_obj = Tello('', 8889)
         self.control_widget = TelloControllerWidget(self.tello_obj, self)
@@ -28,7 +27,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def set_layout(self):
         self.hsplitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        # self.hsplitter.addWidget(self.path_widget)
+        self.hsplitter.addWidget(self.path_widget)
         self.hsplitter.addWidget(self.control_widget)
         hlayout = QtWidgets.QHBoxLayout(self)
         # hlayout.addWidget(self.control_widget)
@@ -67,6 +66,7 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     myshow = MainWindow()  # 主窗口实例化
+    myshow.showMaximized()
     sys.exit(app.exec_())
 
 

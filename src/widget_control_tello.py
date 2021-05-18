@@ -34,11 +34,6 @@ class TelloControllerWidget(QtWidgets.QWidget):
 
     def set_ui(self):
         vlayout = QtWidgets.QVBoxLayout(self)
-        # self.label_show = QtWidgets.QLabel("")
-        # self.label_show.setScaledContents(True)
-        # # self.subwidget = QtWidgets.QWidget()
-        #
-        # vlayout.addWidget(self.label_show)
         self.text_widget = QtWidgets.QTextEdit()
         vlayout.addWidget(self.text_widget)
         self.set_readme()
@@ -52,7 +47,7 @@ class TelloControllerWidget(QtWidgets.QWidget):
         self.take_off_btn = QtWidgets.QPushButton("Take off")
         self.land_btn = QtWidgets.QPushButton("Land")
         self.show_btn.clicked.connect(self.tello_show)
-        self.close_btn.clicked.connect(self.tello_close)
+        self.close_btn.clicked.connect(self.close_show_window)
 
         self.take_off_btn.clicked.connect(self.tello_take_off)
         self.land_btn.clicked.connect(self.tello_landing)
@@ -62,9 +57,16 @@ class TelloControllerWidget(QtWidgets.QWidget):
         hlayout_1.addWidget(self.land_btn)
 
         self.flip_forward_btn = QtWidgets.QPushButton("Flip forward")
+        self.flip_forward_btn.setEnabled(False)
         self.flip_backward_btn = QtWidgets.QPushButton("Flip backward")
+        self.flip_backward_btn.setEnabled(False)
+
         self.flip_right_btn = QtWidgets.QPushButton("Flip right")
+        self.flip_right_btn.setEnabled(False)
+
         self.flip_left_btn = QtWidgets.QPushButton("Flip left")
+        self.flip_left_btn.setEnabled(False)
+
         hlayout_2.addWidget(self.flip_forward_btn)
         hlayout_2.addWidget(self.flip_backward_btn)
         hlayout_2.addWidget(self.flip_right_btn)
@@ -104,15 +106,14 @@ class TelloControllerWidget(QtWidgets.QWidget):
     def set_readme(self):
         text = " This Controller map keyboard inputs to Tello control commands." \
                " Adjust the trackbar to reset distance and degree parameter\n\n"\
-               " ---------------------------------------------------------\n"\
-               "W - Move Tello Up\n" \
-               "S - Move Tello Down\n" \
-               "A - Rotate Tello Counter-Clockwise\n" \
-               "D - Rotate Tello Clockwise\n" \
-               "Arrow Up - Move Tello Forward\n" \
-               "Arrow Down - Move Tello Backward\n" \
-               "Arrow Left - Move Tello Left\n"\
-               "Arrow Right - Move Tello Right"
+               "W - Up\n" \
+               "S - Down\n" \
+               "A - Rotate Counter-Clockwise\n" \
+               "D - Rotate Clockwise\n" \
+               "Arrow Up - Forward\n" \
+               "Arrow Down - Backward\n" \
+               "Arrow Left - Left\n"\
+               "Arrow Right - Right"
         self.text_widget.setText(text)
         self.text_widget.setReadOnly(True)
 
@@ -157,11 +158,18 @@ class TelloControllerWidget(QtWidgets.QWidget):
 
     def tello_show(self):
         print("in tello show")
-        self.show_video_widget = ShowVideoWindow()
-        self.show_video_widget.signal_snap_shot.connect(self.snap_shot)
-        self.show_video_widget.signal_freeze.connect(self.freeze_videos)
-        self.show_video_widget.show()
-        self.is_setpixmap = True
+        if ShowVideoWindow.num == 0:
+            self.show_video_widget = ShowVideoWindow()
+            self.show_video_widget.signal_close.connect(self.close_pixmap)
+            self.show_video_widget.signal_snap_shot.connect(self.snap_shot)
+            self.show_video_widget.signal_freeze.connect(self.freeze_videos)
+            # self.num = 0
+            self.is_setpixmap = True
+            self.show_video_widget.show()
+        else:
+            self.show_video_widget.show()
+
+        # self.show_video_widget.showMaximized()
 
     def snap_shot(self):
         ts = datetime.datetime.now()
@@ -176,9 +184,12 @@ class TelloControllerWidget(QtWidgets.QWidget):
         elif opt == "Stop":
             self.tello_obj.video_freeze(True)
 
-    def tello_close(self):
+    def close_show_window(self):
         self.show_video_widget.close()
+
+    def close_pixmap(self):
         self.is_setpixmap = False
+        print(self.is_setpixmap)
 
     def _sending_command(self):
         """
@@ -201,6 +212,7 @@ class TelloControllerWidget(QtWidgets.QWidget):
                                        self.frame.shape[0],
                                        QtGui.QImage.Format_RGB888)
                     self.show_video_widget.label_show.setPixmap(QtGui.QPixmap.fromImage(img))
+
                 time.sleep(0.05)
         except RuntimeError, e:
             print("[INFO] caught a RuntimeError")
@@ -264,17 +276,18 @@ class TelloControllerWidget(QtWidgets.QWidget):
 class ShowVideoWindow(QtWidgets.QWidget):
     signal_freeze = QtCore.pyqtSignal(str)
     signal_snap_shot = QtCore.pyqtSignal()
+    signal_close = QtCore.pyqtSignal()
+    num = 0
     def __init__(self):
         super(ShowVideoWindow, self).__init__()
         self.set_ui()
-        # self.setWindowFlags(
-        #     QtCore.Qt.WindowMinimizeButtonHint |
-        #     QtCore.Qt.WindowMaximizeButtonHint)
+        ShowVideoWindow.num += 1
+        print "num = ", ShowVideoWindow.num
+
 
     def set_ui(self):
         self.label_show = QtWidgets.QLabel("")
         self.label_show.setScaledContents(True)
-        # self.subwidget = QtWidgets.QWidget()
         self.radio_btn1 = QtWidgets.QRadioButton("Start")
         self.radio_btn1.setChecked(True)
         self.radio_btn1.toggled.connect(lambda: self.btnstate(self.radio_btn1))
@@ -290,14 +303,21 @@ class ShowVideoWindow(QtWidgets.QWidget):
         hlayout.addWidget(self.snap_btn)
         vlayout.addLayout(hlayout)
         self.setLayout(vlayout)
-        # self.label_show.setFixedSize(self.label_show.size())
 
     def snap_shot(self):
         try:
             self.signal_snap_shot.emit()
-
         except Exception as e:
             print e
 
     def btnstate(self, btn):
         self.signal_freeze.emit(btn.text())
+        self.label_show
+
+    def closeEvent(self, QCloseEvent):
+        if ShowVideoWindow.num > 0:
+            ShowVideoWindow.num -= 1
+        print("num = ", ShowVideoWindow.num)
+        self.signal_close.emit()
+        self.close()
+
