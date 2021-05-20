@@ -21,7 +21,7 @@ class MainWindow(QtWidgets.QWidget):
         super(MainWindow, self).__init__()
         self.setWindowTitle("Tello Scan")
         self.tello_obj = Tello('', 8889)
-        self.control_widget = TelloControllerWidget(self.tello_obj, self)
+        self.control_widget = TelloControllerWidget(self.tello_obj)
         self.path_widget = PathPlanningWidget()
         self.set_layout()
 

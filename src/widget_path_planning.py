@@ -4,11 +4,10 @@
 # datetime： 2021/5/18 9:46 
 # coding=utf8
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+# reload(sys)
+# sys.setdefaultencoding('utf-8')
 
 from PyQt5 import QtWidgets, QtGui, QtCore
-
 import pyqtgraph.opengl as gl
 import cv2
 import matplotlib.pyplot as plt
@@ -16,13 +15,14 @@ import numpy as np
 
 
 
-
 class PathPlanningWidget(QtWidgets.QWidget):
-    def __init__(self):
-        super(PathPlanningWidget, self).__init__()
-        self.view_widget = gl.GLViewWidget()
+    def __init__(self, parent=None):
+        super(PathPlanningWidget, self).__init__(parent)
+        # self.view_widget = gl.GLViewWidget(self)
+        # self.view_widget.opts['distance'] = 20
         # self.view_widget.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-        self.view_widget.setBackgroundColor((35, 38, 41, 0))
+
+        # self.view_widget.setBackgroundColor((35, 38, 41, 0))
         self.set_ui()
 
     def set_ui(self):

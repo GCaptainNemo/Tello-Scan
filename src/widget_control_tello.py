@@ -13,7 +13,7 @@ import cv2
 
 
 class TelloControllerWidget(QtWidgets.QWidget):
-    def __init__(self, tello_obj, parent):
+    def __init__(self, tello_obj, parent=None):
         super(TelloControllerWidget, self).__init__(parent)
         self.tello_obj = tello_obj  # videostream device
         # self.outputPath = outputpath  # the path that save pictures created by clicking the takeSnapshot button
@@ -24,7 +24,7 @@ class TelloControllerWidget(QtWidgets.QWidget):
         self.is_setpixmap = False
 
         # two thread: one to receive videos, another to send command
-        self.thread_get_video = threading.Thread(target=self.video_loop)
+        self.thread_get_video = threading.Thread(target=self.video_dealer)
         self.thread_get_video.start()
         self.thread_send_command = threading.Thread(target=self._sending_command)
         self.thread_send_command.start()
@@ -134,7 +134,7 @@ class TelloControllerWidget(QtWidgets.QWidget):
 
     def confirm_dst(self):
         self.distance = float(self.dist_slider.value()) / 100
-        print "self.distance = ", self.distance
+        # print "self.distance = ", self.distance
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Up:
@@ -199,7 +199,7 @@ class TelloControllerWidget(QtWidgets.QWidget):
             self.tello_obj.send_command('command')
             time.sleep(5)
 
-    def video_loop(self):
+    def video_dealer(self):
         try:
             while not self.stop_event.is_set():
                 self.frame = self.tello_obj.read()
@@ -214,7 +214,7 @@ class TelloControllerWidget(QtWidgets.QWidget):
                     self.show_video_widget.label_show.setPixmap(QtGui.QPixmap.fromImage(img))
 
                 time.sleep(0.05)
-        except RuntimeError, e:
+        except RuntimeError as e:
             print("[INFO] caught a RuntimeError")
 
     def tello_take_off(self):
@@ -224,35 +224,35 @@ class TelloControllerWidget(QtWidgets.QWidget):
         return self.tello_obj.land()
 
     def on_keypress_w(self):
-        print "up %d m" % self.distance
+        # print "up %d m" % self.distance
         self.tello_obj.move_up(self.distance)
 
     def on_keypress_s(self):
-        print "down %d m" % self.distance
+        # print "down %d m" % self.distance
         self.tello_obj.move_down(self.distance)
 
     def on_keypress_a(self):
-        print "ccw %d degree" % self.degree
+        # print "ccw %d degree" % self.degree
         self.tello_obj.rotate_ccw(self.degree)
 
     def on_keypress_d(self):
-        print "cw %d m" % self.degree
+        # print "cw %d m" % self.degree
         self.tello_obj.rotate_cw(self.degree)
 
     def on_keypress_up(self):
-        print "forward %d m" % self.distance
+        # print "forward %d m" % self.distance
         self.tello_obj.move_forward(self.distance)
 
     def on_keypress_down(self):
-        print "backward %d m" % self.distance
+        # print "backward %d m" % self.distance
         self.tello_obj.move_backward(self.distance)
 
     def on_keypress_left(self):
-        print "left %d m" % self.distance
+        # print "left %d m" % self.distance
         self.tello_obj.move_left(self.distance)
 
     def on_keypress_right(self):
-        print "right %d m" % self.distance
+        # print "right %d m" % self.distance
         self.tello_obj.move_right(self.distance)
 
     def on_keypress_enter(self):
@@ -282,8 +282,6 @@ class ShowVideoWindow(QtWidgets.QWidget):
         super(ShowVideoWindow, self).__init__()
         self.set_ui()
         ShowVideoWindow.num += 1
-        print "num = ", ShowVideoWindow.num
-
 
     def set_ui(self):
         self.label_show = QtWidgets.QLabel("")
@@ -308,7 +306,7 @@ class ShowVideoWindow(QtWidgets.QWidget):
         try:
             self.signal_snap_shot.emit()
         except Exception as e:
-            print e
+            print (e)
 
     def btnstate(self, btn):
         self.signal_freeze.emit(btn.text())
