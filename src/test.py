@@ -2,6 +2,23 @@ import pyqtgraph.examples
 pyqtgraph.examples.run()
 
 
+lst_xyz = []
+for z in range(3):
+    lst_xy = []
+    for y in range(3):
+        lst = []
+        for x in range(3):
+            lst.append([x, y, z])
+        if y % 2 == 1:
+            lst.reverse()
+        lst_xy += lst
+    if z % 2 == 1:
+        lst_xy.reverse()
+    lst_xyz += lst_xy
+for i in lst_xyz:
+    print(i)
+            # print(x, y, z)
+
 # # -*- coding: utf-8 -*-
 # """
 # Demonstrates use of GLScatterPlotItem with rapidly-updating plots.

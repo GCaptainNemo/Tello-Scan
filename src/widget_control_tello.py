@@ -111,10 +111,10 @@ class TelloControllerWidget(QtWidgets.QWidget):
                "S - Down\n" \
                "A - Rotate Counter-Clockwise\n" \
                "D - Rotate Clockwise\n" \
-               "Arrow Up - Forward\n" \
-               "Arrow Down - Backward\n" \
-               "Arrow Left - Left\n"\
-               "Arrow Right - Right"
+               "I - Forward\n" \
+               "K - Backward\n" \
+               "J - Left\n"\
+               "L - Right"
         self.text_widget.setText(text)
         self.text_widget.setReadOnly(True)
 

@@ -16,12 +16,14 @@ import numpy as np
 
 
 class PathPlanningWidget(QtWidgets.QWidget):
+    signal_trajectory_point = QtCore.pyqtSignal(list)
     def __init__(self, parent=None):
         super(PathPlanningWidget, self).__init__(parent)
         self.view_widget = gl.GLViewWidget()
         self.view_widget.setBackgroundColor((35, 38, 41, 0))
         self.plot_grid_axis()
         self.dst_img = None
+        self.plt_arrow = True
         self.set_ui()
 
     def set_ui(self):
@@ -46,6 +48,8 @@ class PathPlanningWidget(QtWidgets.QWidget):
         self.z_interval_label = QtWidgets.QLabel("Z-axis interval(m):")
         self.z_interval_lineedit = QtWidgets.QLineEdit()
         self.confirm_btn = QtWidgets.QPushButton("OK")
+        self.start_trajectory_btn = QtWidgets.QPushButton("Follow the path")
+        self.start_trajectory_btn.clicked.connect(self.start_trajectory)
         path_plan_hlayout_1.addWidget(self.region_btn)
         path_plan_hlayout_1.addWidget(self.x_num_label)
         path_plan_hlayout_1.addWidget(self.x_num_lineedit)
@@ -57,16 +61,23 @@ class PathPlanningWidget(QtWidgets.QWidget):
         path_plan_hlayout_2.addWidget(self.z_interval_label)
         path_plan_hlayout_2.addWidget(self.z_interval_lineedit)
         path_plan_hlayout_2.addWidget(self.confirm_btn)
+        path_plan_hlayout_2.addWidget(self.start_trajectory_btn)
+
         path_plan_vlayout.addLayout(path_plan_hlayout_1)
         path_plan_vlayout.addLayout(path_plan_hlayout_2)
         self.region_btn.clicked.connect(self.region_selection)
         self.confirm_btn.clicked.connect(self.confirm)
 
+    def start_trajectory(self):
+        self.signal_trajectory_point.emit(self.lst_xyz)
+
     def confirm(self):
+        self.replot()
+        if self.dst_img is not None:
+            self.plot_image()
         x_num = int(self.x_num_lineedit.text())
         y_num = int(self.y_num_lineedit.text())
         z_num = int(self.z_num_lineedit.text())
-
         z_interval = float(self.z_interval_lineedit.text()) * 100
         if self.dst_img is not None:
             x_interval = float(self.dst_img.shape[0]) / x_num
@@ -75,40 +86,64 @@ class PathPlanningWidget(QtWidgets.QWidget):
             x_interval = 100
             y_interval = 100
         z_translate = 300
+
+        # #################################################
+        # add camera
+        # #################################################
+        self.lst_xyz = []
         for z in range(z_num):
-            for x in range(x_num):
-                for y in range(y_num):
+            lst_xy = []
+            for y in range(y_num):
+                lst = []
+                for x in range(x_num):
                     md = pg.opengl.MeshData.sphere(rows=10, cols=20)
                     pos = pg.opengl.GLMeshItem(meshdata=md, smooth=True,
                                                 color=(.7019607843137254, .8901960784313725, .9607843137254902, .5),
                                                 shader='shaded',
                                                 drawFaces=True)
-
-                    pos.translate(x_interval * x, y_interval * y, z_interval * z + z_translate)
+                    pos_array = np.array([x_interval * x, y_interval * y, z_interval * z + z_translate])
+                    lst.append(pos_array)
+                    pos.translate(pos_array[0], pos_array[1], pos_array[2])
                     pos.scale(10, 10, 10)
                     self.view_widget.addItem(pos)
+                if y % 2 == 1:
+                    lst.reverse()
+                lst_xy += lst
+            if z % 2 == 1:
+                lst_xy.reverse()
+            self.lst_xyz += lst_xy
+
+        # ############################################################
+        # plot trajectory
+        # ############################################################
+        print("plt_arrow = ", self.plt_arrow)
+        if self.plt_arrow:
+            for i in range(len(self.lst_xyz) - 1):
+                pos = np.array([self.lst_xyz[i], self.lst_xyz[i + 1]])
+                self.line_item_x = gl.GLLinePlotItem(pos=pos,
+                                                     color=(.7019607843137254, .8901960784313725, .9607843137254902, .5),
+                                                     width=10)
+                self.view_widget.addItem(self.line_item_x)
+
 
     def region_selection(self):
         self.browse_picture_widget = BrowsePictureWidget()
-        self.browse_picture_widget.signal_img.connect(self.render_region)
+        self.browse_picture_widget.signal_img.connect(self.slot_get_image)
         self.browse_picture_widget.resize(1000, 800)
         self.browse_picture_widget.showNormal()
 
-    # def render_region_test(self):
-    #     img = cv2.imread("./image/2021-05-18_14-31-46.jpg")
-    #     img = cv2.resize(img, [1000, 1000])
-    #     img = cv2.flip(img, 0)
-    #     img = img.transpose((1, 0, 2))
-    #     tex3 = pg.makeRGBA(img, levels=[0, 255])[0]  # xy plane
-    #     v3 = gl.GLImageItem(tex3)
-    #     # v3.translate(-shape[0] / 2, -shape[1] / 2, 0)
-    #     self.view_widget.addItem(v3)
-
-    def render_region(self, dst_img):
+    def slot_get_image(self, dst_img):
         dst_img = dst_img[0]
         dst_img = cv2.flip(dst_img, 0)  # flip vertical
         self.dst_img = dst_img.transpose((1, 0, 2))  # row, column to x, y
+        self.plot_image()
 
+    def replot(self):
+        self.view_widget.clear()
+        self.plot_grid_axis()
+
+    def plot_image(self):
+        self.replot()
         tex3 = pg.makeRGBA(self.dst_img, levels=[0, 255])[0]  # xy plane
         v3 = gl.GLImageItem(tex3)
         self.view_widget.addItem(v3)
