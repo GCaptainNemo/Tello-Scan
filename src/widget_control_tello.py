@@ -10,6 +10,7 @@ import time
 import datetime
 import os
 import cv2
+import socket
 
 
 class TelloControllerWidget(QtWidgets.QWidget):
@@ -23,11 +24,11 @@ class TelloControllerWidget(QtWidgets.QWidget):
         self.degree = 45  # default degree for 'cw' or 'ccw' cmd
         self.is_setpixmap = False
 
-        # two thread: one to receive videos, another to send command
-        self.thread_get_video = threading.Thread(target=self.video_dealer)
-        self.thread_get_video.start()
+        self.thread_deal_video = threading.Thread(target=self.video_dealer)
+        self.thread_deal_video.start()
         self.thread_send_command = threading.Thread(target=self._sending_command)
         self.thread_send_command.start()
+
         self.output_path = "./image"
         self.logger_text = ""
         self.set_ui()
