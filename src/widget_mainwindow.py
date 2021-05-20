@@ -24,6 +24,7 @@ class MainWindow(QtWidgets.QWidget):
         self.control_widget = TelloControllerWidget(self.tello_obj)
         self.path_widget = PathPlanningWidget()
         self.set_layout()
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     def set_layout(self):
         self.hsplitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)

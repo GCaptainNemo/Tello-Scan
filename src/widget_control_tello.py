@@ -306,11 +306,10 @@ class ShowVideoWindow(QtWidgets.QWidget):
         try:
             self.signal_snap_shot.emit()
         except Exception as e:
-            print (e)
+            print(e)
 
     def btnstate(self, btn):
         self.signal_freeze.emit(btn.text())
-        self.label_show
 
     def closeEvent(self, QCloseEvent):
         if ShowVideoWindow.num > 0:

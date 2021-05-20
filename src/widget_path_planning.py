@@ -9,31 +9,128 @@ import sys
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 import pyqtgraph.opengl as gl
+import pyqtgraph as pg
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-
 class PathPlanningWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(PathPlanningWidget, self).__init__(parent)
-        # self.view_widget = gl.GLViewWidget(self)
-        # self.view_widget.opts['distance'] = 20
-        # self.view_widget.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-
-        # self.view_widget.setBackgroundColor((35, 38, 41, 0))
+        self.view_widget = gl.GLViewWidget()
+        self.view_widget.setBackgroundColor((35, 38, 41, 0))
+        self.plot_grid_axis()
+        self.dst_img = None
         self.set_ui()
 
     def set_ui(self):
-        self.browse_picture_widget = BrowsePictureWidget()
         hlayout = QtWidgets.QHBoxLayout()
+        self.path_planning_widget = QtWidgets.QWidget()
+        vsplitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        vsplitter.addWidget(self.view_widget)
+        vsplitter.addWidget(self.path_planning_widget)
         self.setLayout(hlayout)
-        # hlayout.addWidget(self.view_widget)
-        hlayout.addWidget(self.browse_picture_widget)
+        hlayout.addWidget(vsplitter)
+        path_plan_vlayout = QtWidgets.QVBoxLayout(self.path_planning_widget)
+        path_plan_hlayout_1 = QtWidgets.QHBoxLayout()
+        path_plan_hlayout_2 = QtWidgets.QHBoxLayout()
+
+        self.region_btn = QtWidgets.QPushButton("Region Selection")
+        self.x_num_label = QtWidgets.QLabel("X point num:")
+        self.x_num_lineedit = QtWidgets.QLineEdit()
+        self.y_num_label = QtWidgets.QLabel("Y point num:")
+        self.y_num_lineedit = QtWidgets.QLineEdit()
+        self.z_num_label = QtWidgets.QLabel("Z point num:")
+        self.z_num_lineedit = QtWidgets.QLineEdit()
+        self.z_interval_label = QtWidgets.QLabel("Z-axis interval(m):")
+        self.z_interval_lineedit = QtWidgets.QLineEdit()
+        self.confirm_btn = QtWidgets.QPushButton("OK")
+        path_plan_hlayout_1.addWidget(self.region_btn)
+        path_plan_hlayout_1.addWidget(self.x_num_label)
+        path_plan_hlayout_1.addWidget(self.x_num_lineedit)
+        path_plan_hlayout_1.addWidget(self.y_num_label)
+        path_plan_hlayout_1.addWidget(self.y_num_lineedit)
+
+        path_plan_hlayout_2.addWidget(self.z_num_label)
+        path_plan_hlayout_2.addWidget(self.z_num_lineedit)
+        path_plan_hlayout_2.addWidget(self.z_interval_label)
+        path_plan_hlayout_2.addWidget(self.z_interval_lineedit)
+        path_plan_hlayout_2.addWidget(self.confirm_btn)
+        path_plan_vlayout.addLayout(path_plan_hlayout_1)
+        path_plan_vlayout.addLayout(path_plan_hlayout_2)
+        self.region_btn.clicked.connect(self.region_selection)
+        self.confirm_btn.clicked.connect(self.confirm)
+
+    def confirm(self):
+        x_num = int(self.x_num_lineedit.text())
+        y_num = int(self.y_num_lineedit.text())
+        z_num = int(self.z_num_lineedit.text())
+
+        z_interval = float(self.z_interval_lineedit.text()) * 100
+        if self.dst_img is not None:
+            x_interval = float(self.dst_img.shape[0]) / x_num
+            y_interval = float(self.dst_img.shape[1]) / y_num
+        else:
+            x_interval = 100
+            y_interval = 100
+        z_translate = 300
+        for z in range(z_num):
+            for x in range(x_num):
+                for y in range(y_num):
+                    md = pg.opengl.MeshData.sphere(rows=10, cols=20)
+                    pos = pg.opengl.GLMeshItem(meshdata=md, smooth=True,
+                                                color=(.7019607843137254, .8901960784313725, .9607843137254902, .5),
+                                                shader='shaded',
+                                                drawFaces=True)
+
+                    pos.translate(x_interval * x, y_interval * y, z_interval * z + z_translate)
+                    pos.scale(10, 10, 10)
+                    self.view_widget.addItem(pos)
+
+    def region_selection(self):
+        self.browse_picture_widget = BrowsePictureWidget()
+        self.browse_picture_widget.signal_img.connect(self.render_region)
+        self.browse_picture_widget.resize(1000, 800)
+        self.browse_picture_widget.showNormal()
+
+    # def render_region_test(self):
+    #     img = cv2.imread("./image/2021-05-18_14-31-46.jpg")
+    #     img = cv2.resize(img, [1000, 1000])
+    #     img = cv2.flip(img, 0)
+    #     img = img.transpose((1, 0, 2))
+    #     tex3 = pg.makeRGBA(img, levels=[0, 255])[0]  # xy plane
+    #     v3 = gl.GLImageItem(tex3)
+    #     # v3.translate(-shape[0] / 2, -shape[1] / 2, 0)
+    #     self.view_widget.addItem(v3)
+
+    def render_region(self, dst_img):
+        dst_img = dst_img[0]
+        dst_img = cv2.flip(dst_img, 0)  # flip vertical
+        self.dst_img = dst_img.transpose((1, 0, 2))  # row, column to x, y
+
+        tex3 = pg.makeRGBA(self.dst_img, levels=[0, 255])[0]  # xy plane
+        v3 = gl.GLImageItem(tex3)
+        self.view_widget.addItem(v3)
+
+    def plot_grid_axis(self):
+        self.grid_item = gl.GLGridItem()  # 画网格
+        self.grid_item.scale(100, 100, 100)
+        # self.grid.translate(self.translate_pos[0], self.translate_pos[1], self.translate_pos[2])
+        self.view_widget.addItem(self.grid_item)
+        x_axis_pos = np.array([[-500, -500, 0], [0, -500, 0]])
+        self.line_item_x = gl.GLLinePlotItem(pos=x_axis_pos, color="r")
+        y_axis_pos = np.array([[-500, -500, 0], [-500, 0, 0]])
+        self.line_item_y = gl.GLLinePlotItem(pos=y_axis_pos, color="g")
+        y_axis_pos = np.array([[-500, -500, 0], [-500, -500, 500]])
+        self.line_item_z = gl.GLLinePlotItem(pos=y_axis_pos, color="b")
+        self.view_widget.addItem(self.line_item_x)
+        self.view_widget.addItem(self.line_item_y)
+        self.view_widget.addItem(self.line_item_z)
 
 
 class BrowsePictureWidget(QtWidgets.QWidget):
+    signal_img = QtCore.pyqtSignal(list)
     def __init__(self):
         super(BrowsePictureWidget, self).__init__()
         VSplitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
@@ -42,7 +139,7 @@ class BrowsePictureWidget(QtWidgets.QWidget):
         self.output_widget = MyWinPicture()
         VSplitter.addWidget(self.rgb_widget)
         VSplitter.addWidget(self.output_widget)
-        Hlayout = QtWidgets.QHBoxLayout()
+        Hlayout_1 = QtWidgets.QHBoxLayout()
         self.btn_browse_rgb = QtWidgets.QPushButton('Browse')
         self.btn_browse_rgb.clicked.connect(self.browse_rgb)
         self.btn_extract_points = QtWidgets.QPushButton('Extract points')
@@ -50,12 +147,36 @@ class BrowsePictureWidget(QtWidgets.QWidget):
         self.btn_registration = QtWidgets.QPushButton('Registrtion')
         self.btn_registration.clicked.connect(self.registration)
 
-        Hlayout.addWidget(self.btn_browse_rgb)
-        Hlayout.addWidget(self.btn_extract_points)
-        Hlayout.addWidget(self.btn_registration)
+        # ####################################################
+        Hlayout_1.addWidget(self.btn_browse_rgb)
+        Hlayout_1.addWidget(self.btn_extract_points)
+        Hlayout_1.addWidget(self.btn_registration)
+        Hlayout_2 = QtWidgets.QHBoxLayout()
+        self.width_label = QtWidgets.QLabel("Width(m):")
+        self.width_lineedit = QtWidgets.QLineEdit()
+        self.height_label = QtWidgets.QLabel("Height(m):")
+        self.height_lineedit = QtWidgets.QLineEdit()
+        self.confirm_btn = QtWidgets.QPushButton("OK")
+        Hlayout_2.addWidget(self.width_label)
+        Hlayout_2.addWidget(self.width_lineedit)
+        Hlayout_2.addWidget(self.height_label)
+        Hlayout_2.addWidget(self.height_lineedit)
+        Hlayout_2.addWidget(self.confirm_btn)
+        self.confirm_btn.clicked.connect(self.confirm)
+        # #############################################################
 
         vlayout.addWidget(VSplitter)
-        vlayout.addLayout(Hlayout)
+        vlayout.addLayout(Hlayout_1)
+        vlayout.addLayout(Hlayout_2)
+
+        self.setWindowTitle("Region selection")
+
+    def confirm(self):
+        width = int(self.width_lineedit.text())
+        height = int(self.height_lineedit.text())
+        resize_img = cv2.resize(self.dst, [height * 100, width * 100])
+        self.signal_img.emit([resize_img])
+        self.close()
 
     def browse_rgb(self):
         try:
@@ -105,7 +226,6 @@ class BrowsePictureWidget(QtWidgets.QWidget):
         try:
             # axtemp = event.inaxes
             axtemp = self.ax_rgb[0]
-
             x_min, x_max = axtemp.get_xlim()
             y_min, y_max = axtemp.get_ylim()
             fanwei_x = (x_max - x_min) / 10
@@ -152,14 +272,13 @@ class BrowsePictureWidget(QtWidgets.QWidget):
 
     def registration(self):
         try:
-
             feature_pos = np.array(self.feature_point_lst[:4], dtype='float32')
             obj_pos = np.array([[0, 1000], [1000, 1000], [1000, 0], [0, 0]])
             homography_matrix = cv2.findHomography(feature_pos, obj_pos)
-            dst = cv2.warpPerspective(self.im_rgb, homography_matrix[0], (1000, 1000))
-            img = QtGui.QImage(dst, dst.shape[1],
-                                 dst.shape[0], QtGui.QImage.Format_RGB888)
-            self.output_widget.pixmap = QtGui.QPixmap.fromImage(img)
+            self.dst = cv2.warpPerspective(self.im_rgb, homography_matrix[0], (1000, 1000))
+            dst_img = QtGui.QImage(self.dst, self.dst.shape[1],
+                                 self.dst.shape[0], QtGui.QImage.Format_RGB888)
+            self.output_widget.pixmap = QtGui.QPixmap.fromImage(dst_img)
             self.output_widget.repaint()
         except Exception as e:
             print(e)

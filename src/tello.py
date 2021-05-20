@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 # import h264decoder
-import libh264decoder
+# import libh264decoder
 
 # import av
 import cv2
@@ -30,7 +30,7 @@ class Tello:
         # self.video_udp = av.open('udp://{}:{}'.format(tello_ip, tello_port), 'r')
         self.abort_flag = False
         # self.decoder = h264decoder.H264Decoder()
-        self.decoder = libh264decoder.H264Decoder()
+        # self.decoder = libh264decoder.H264Decoder()
 
         self.command_timeout = command_timeout
         self.imperial = imperial
@@ -63,11 +63,11 @@ class Tello:
                                                      self._receive_video_func)
         # self.receive_video_thread.daemon = True
         self.receive_video_thread.start()
-    #
-    # def __del__(self):
-    #     """Closes the local socket."""
-    #     self.socket.close()
-    #     self.socket_video.close()
+
+    def __del__(self):
+        """Closes the local socket."""
+        self.socket.close()
+        self.socket_video.close()
     
     def read(self):
         """Return the last frame from camera."""
