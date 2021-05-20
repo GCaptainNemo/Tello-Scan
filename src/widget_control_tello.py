@@ -19,8 +19,8 @@ class TelloControllerWidget(QtWidgets.QWidget):
         # self.outputPath = outputpath  # the path that save pictures created by clicking the takeSnapshot button
         self.stop_event = threading.Event()
         self.stop_event.clear()
-        self.distance = 0.25  # default distance for 'move' cmd
-        self.degree = 0  # default degree for 'cw' or 'ccw' cmd
+        self.distance = 0.50  # default distance for 'move' cmd
+        self.degree = 45  # default degree for 'cw' or 'ccw' cmd
         self.is_setpixmap = False
 
         # two thread: one to receive videos, another to send command
@@ -78,9 +78,10 @@ class TelloControllerWidget(QtWidgets.QWidget):
         vlayout.addLayout(hlayout_1)
         vlayout.addLayout(hlayout_2)
 
-        self.dist_label = QtWidgets.QLabel("distance: 0.25m")
+        self.dist_label = QtWidgets.QLabel("distance: 0.5m")
         self.dist_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
         self.dist_slider.setRange(25, 500)  # 3
+        self.dist_slider.setValue(50)
         self.dist_slider.valueChanged.connect(self.on_change_dist)
         self.dst_button = QtWidgets.QPushButton("ok")
 
@@ -88,13 +89,13 @@ class TelloControllerWidget(QtWidgets.QWidget):
         hlayout_3.addWidget(self.dist_slider)
         hlayout_3.addWidget(self.dst_button)
         self.dst_button.clicked.connect(self.confirm_dst)
-        self.degree_label = QtWidgets.QLabel("degree: 0°")
+        self.degree_label = QtWidgets.QLabel("degree: 45°")
         self.degree_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
+        self.degree_slider.setValue(45)
         self.degree_slider.setRange(0, 360)  # 3
         self.degree_slider.valueChanged.connect(self.on_change_degree)
         self.degree_button = QtWidgets.QPushButton("ok")
         self.degree_button.clicked.connect(self.confirm_degree)
-
         hlayout_4.addWidget(self.degree_label)
         hlayout_4.addWidget(self.degree_slider)
         hlayout_4.addWidget(self.degree_button)
@@ -137,13 +138,13 @@ class TelloControllerWidget(QtWidgets.QWidget):
         # print "self.distance = ", self.distance
 
     def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Up:
-            self.on_keypress_up()
-        elif event.key() == QtCore.Qt.Key_Down:
-            self.on_keypress_down()
-        elif event.key() == QtCore.Qt.Key_Left:
+        if event.key() == QtCore.Qt.Key_I:
+            self.on_keypress_forward()
+        elif event.key() == QtCore.Qt.Key_K:
+            self.on_keypress_backward()
+        elif event.key() == QtCore.Qt.Key_J:
             self.on_keypress_left()
-        elif event.key() == QtCore.Qt.Key_Right:
+        elif event.key() == QtCore.Qt.Key_L:
             self.on_keypress_right()
         elif event.key() == QtCore.Qt.Key_W:
             self.on_keypress_w()
@@ -239,11 +240,11 @@ class TelloControllerWidget(QtWidgets.QWidget):
         # print "cw %d m" % self.degree
         self.tello_obj.rotate_cw(self.degree)
 
-    def on_keypress_up(self):
+    def on_keypress_forward(self):
         # print "forward %d m" % self.distance
         self.tello_obj.move_forward(self.distance)
 
-    def on_keypress_down(self):
+    def on_keypress_backward(self):
         # print "backward %d m" % self.distance
         self.tello_obj.move_backward(self.distance)
 
