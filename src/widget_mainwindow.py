@@ -16,20 +16,16 @@ from tello import Tello
 from utils import *
 import numpy as np
 
-class MainWindow(QtWidgets.QWidget):
-    def __init__(self):
-        super(MainWindow, self).__init__()
-        self.setWindowTitle("Tello Scan")
-        self.tello_obj = Tello('', 8889)
-        self.control_widget = TelloControllerWidget(self.tello_obj)
-        self.path_widget = PathPlanningWidget()
-        self.path_widget.signal_trajectory_point.connect(self.start_trajectory)
-        self.set_layout()
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-    def start_trajectory(self, pos_lst):
-        vec_lst = [(pos_lst[i+1] - pos_lst[i]) / 100 for i in range(len(pos_lst) - 1)]
-        for vec in vec_lst:
+class ThreadFollowPath(QtCore.QThread):
+    def __init__(self, vec_lst, tello_obj):
+        super(ThreadFollowPath, self).__init__()
+        self.vec_lst = vec_lst
+        self.tello_obj = tello_obj
+
+    def run(self):
+        print("in")
+        for vec in self.vec_lst:
             index = np.argmax(np.abs(vec))
             if index == 0:
                 if vec[index] > 0:
@@ -46,6 +42,25 @@ class MainWindow(QtWidgets.QWidget):
                     self.tello_obj.move_forward(vec[index])
                 else:
                     self.tello_obj.move_backward(vec[index])
+            self.sleep(3)
+        self.deleteLater()
+
+
+class MainWindow(QtWidgets.QWidget):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self.setWindowTitle("Tello Scan")
+        self.tello_obj = Tello('', 8889)
+        self.control_widget = TelloControllerWidget(self.tello_obj)
+        self.path_widget = PathPlanningWidget()
+        self.path_widget.signal_trajectory_point.connect(self.start_trajectory)
+        self.set_layout()
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+    def start_trajectory(self, pos_lst):
+        vec_lst = [(pos_lst[i+1] - pos_lst[i]) / 100 for i in range(len(pos_lst) - 1)]
+        self.thread_follow_path = ThreadFollowPath(vec_lst, self.tello_obj)
+        self.thread_follow_path.start()
 
     def set_layout(self):
         self.hsplitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)

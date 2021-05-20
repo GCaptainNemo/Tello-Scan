@@ -80,8 +80,8 @@ class PathPlanningWidget(QtWidgets.QWidget):
         z_num = int(self.z_num_lineedit.text())
         z_interval = float(self.z_interval_lineedit.text()) * 100
         if self.dst_img is not None:
-            x_interval = float(self.dst_img.shape[0]) / x_num
-            y_interval = float(self.dst_img.shape[1]) / y_num
+            x_interval = float(self.dst_img.shape[0]) / (max(x_num, 2) - 1)
+            y_interval = float(self.l.shape[1]) / (max(y_num, 2) - 1)
         else:
             x_interval = 100
             y_interval = 100
@@ -124,7 +124,6 @@ class PathPlanningWidget(QtWidgets.QWidget):
                                                      color=(.7019607843137254, .8901960784313725, .9607843137254902, .5),
                                                      width=10)
                 self.view_widget.addItem(self.line_item_x)
-
 
     def region_selection(self):
         self.browse_picture_widget = BrowsePictureWidget()
