@@ -81,7 +81,7 @@ class PathPlanningWidget(QtWidgets.QWidget):
         z_interval = float(self.z_interval_lineedit.text()) * 100
         if self.dst_img is not None:
             x_interval = float(self.dst_img.shape[0]) / (max(x_num, 2) - 1)
-            y_interval = float(self.l.shape[1]) / (max(y_num, 2) - 1)
+            y_interval = float(self.dst_img.shape[1]) / (max(y_num, 2) - 1)
         else:
             x_interval = 100
             y_interval = 100
@@ -206,9 +206,9 @@ class BrowsePictureWidget(QtWidgets.QWidget):
         self.setWindowTitle("Region selection")
 
     def confirm(self):
-        width = int(self.width_lineedit.text())
-        height = int(self.height_lineedit.text())
-        resize_img = cv2.resize(self.dst, [height * 100, width * 100])
+        width = float(self.width_lineedit.text())
+        height = float(self.height_lineedit.text())
+        resize_img = cv2.resize(self.dst, [int(width * 100), int(height * 100)])
         self.signal_img.emit([resize_img])
         self.close()
 

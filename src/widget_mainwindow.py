@@ -28,21 +28,21 @@ class ThreadFollowPath(QtCore.QThread):
         for vec in self.vec_lst:
             index = np.argmax(np.abs(vec))
             if index == 0:
-                if vec[index] > 0:
+                if vec[index] >= 0:
                     self.tello_obj.move_forward(vec[index])
                 else:
-                    self.tello_obj.move_backward(vec[index])
+                    self.tello_obj.move_backward(-vec[index])
             elif index == 1:
-                if vec[index] > 0:
+                if vec[index] >= 0:
                     self.tello_obj.move_left(vec[index])
                 else:
-                    self.tello_obj.move_right(vec[index])
+                    self.tello_obj.move_right(-vec[index])
             elif index == 2:
-                if vec[index] > 0:
+                if vec[index] >= 0:
                     self.tello_obj.move_forward(vec[index])
                 else:
-                    self.tello_obj.move_backward(vec[index])
-            self.sleep(3)
+                    self.tello_obj.move_backward(-vec[index])
+            self.sleep(5)
         self.deleteLater()
 
 
