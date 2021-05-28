@@ -3,60 +3,12 @@ import threading
 import time
 import numpy as np
 
-import h264decoder
-# import libh264decoder
+# import h264decoder
+import libh264decoder
 
 # import av
 import cv2
 from PyQt5 import QtCore
-
-
-class ThreadReceiveVideos(QtCore.QThread):
-    def __init__(self, socket_video):
-        super(ThreadReceiveVideos, self).__init__()
-        self.socket_video = socket_video
-        self.decoder = h264decoder.H264Decoder()
-
-    def run(self):
-        packet_data = ""
-        while True:
-            print("in receive videos")
-            try:
-                res_string, address = self.socket_video.recvfrom(1024)
-            except Exception as e:
-                print(e)
-            print("address = ", address)
-            packet_data += res_string
-            # end of frame
-            if len(res_string) != 1460:
-                for frame in self._h264_decode(packet_data):
-                    # for frame in self.video_udp.decode():
-                    self.frame = frame
-                    # print("frame = ", self.frame)
-                packet_data = ""
-
-    def _h264_decode(self, packet_data):
-        """
-        decode raw h264 format data from Tello
-
-        :param packet_data: raw h264 data array
-
-        :return: a list of decoded frame
-        """
-        res_frame_list = []
-        frames = self.decoder.decode(packet_data)
-        for framedata in frames:
-            (frame, w, h, ls) = framedata
-            if frame is not None:
-                print('frame size %i bytes, w %i, h %i, linesize %i' % (len(frame), w, h, ls))
-
-                frame = np.fromstring(frame, dtype=np.ubyte, count=len(frame), sep='')
-                frame = (frame.reshape((h, ls / 3, 3)))
-                frame = frame[:, :w, :]
-                res_frame_list.append(frame)
-
-        return res_frame_list
-
 
 
 class Tello:
@@ -76,10 +28,9 @@ class Tello:
         :param tello_port (int): Tello port.
         """
         self.tello_ip = tello_ip
-        # self.video_udp = av.open('udp://{}:{}'.format(tello_ip, tello_port), 'r')
         self.abort_flag = False
-        self.decoder = h264decoder.H264Decoder()  # python3
-        # self.decoder = libh264decoder.H264Decoder()  # python2.7
+        # self.decoder = h264decoder.H264Decoder()  # python3
+        self.decoder = libh264decoder.H264Decoder()  # python2.7
 
         self.command_timeout = command_timeout
         self.imperial = imperial
@@ -90,31 +41,30 @@ class Tello:
         self.socket_send_command = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # socket for sending cmd
         self.socket_video = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # socket for receiving video stream
         # self.socket_video = socket.socket(type=socket.SOCK_DGRAM)  # socket for receiving video stream
-        # self.socket_video = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.local_video_port = 11111  # port for receiving video stream
+        # self.local_video_port = 11111  # port for receiving video stream
         # self.socket_video.bind((local_ip, self.local_video_port))
-        self.socket_video.bind(("0.0.0.0", self.local_video_port))
-
+        self.socket_video.bind((local_ip, 11111))
 
         self.tello_address = (tello_ip, tello_port)
         self.last_height = 0
         self.socket_send_command.bind((local_ip, local_port))
 
-        # thread for receiving video
-        self.receive_command_thread = threading.Thread(target=self._receive_thread)
-        self.receive_command_thread.daemon = True
-        self.receive_command_thread.start()
-        self.receive_video_thread = threading.Thread(target=self._receive_video_func)
-        self.receive_video_thread.daemon = True
-        self.receive_video_thread.start()
-
-        # to receive video -- send cmd: command, streamon
         self.socket_send_command.sendto('command'.encode("utf-8"), self.tello_address)
         print('sent: command')
-        self.socket_send_command.sendto(b'streamon', self.tello_address)
+
+        # thread for receiving video
+        self.receive_command_thread = threading.Thread(target=self.receive_command_func)
+        self.receive_command_thread.daemon = True
+        self.receive_command_thread.start()
+        # self.receive_video_thread = threading.Thread(target=self.receive_video_func)
+        # use in python 2.7
+        self.receive_video_thread = threading.Thread(
+            target=self._receive_video_thread_py27)
+
+        self.receive_video_thread.daemon = True
+        self.receive_video_thread.start()
+        self.socket_send_command.sendto('streamon'.encode("utf-8"), self.tello_address)
         print('sent: streamon')
-        # self.thread_receive_video = ThreadReceiveVideos(self.socket_video)
-        # self.thread_receive_video.start()
 
     def __del__(self):
         """Closes the local socket."""
@@ -134,7 +84,7 @@ class Tello:
         if is_freeze:
             self.last_frame = self.frame
 
-    def _receive_thread(self):
+    def receive_command_func(self):
         """Listen to responses from the Tello.
 
         Runs as a thread, sets self.response to whatever the Tello last returned.
@@ -146,29 +96,31 @@ class Tello:
                 print(">> response: ", self.response)
             except socket.error as exc:
                 print("Caught exception socket.error : %s" % exc)
-    #
-    # def _receive_video_func(self):
-    #
-    #     cap = cv2.VideoCapture('udp://' + "0.0.0.0:11111")
-    #     # Runs while 'stream_state' is True
-    #     while True:
-    #         print("in video func")
-    #         ret, self.last_frame = cap.read()
-    #         try:
-    #             cv2.imshow('DJI Tello', self.last_frame)
-    #         except Exception as e:
-    #             print(e)
-    #         # Video Stream is closed if escape key is pressed
-    #         k = cv2.waitKey(1) & 0xFF
-    #         if k == 27:
-    #             break
-    #     cap.release()
-    #     cv2.destroyAllWindows()
-    #
-    def _receive_video_func(self):
+
+    def _receive_video_thread_py27(self):
         """
         Listens for video streaming (raw h264) from the Tello.
 
+        Runs as a thread, sets self.frame to the most recent frame Tello captured.
+
+        """
+        packet_data = ""
+        while True:
+            try:
+                res_string, ip = self.socket_video.recvfrom(2048)
+                packet_data += res_string
+                # end of frame
+                if len(res_string) != 1460:
+                    for frame in self._h264_decode(packet_data):
+                        self.frame = frame
+                    packet_data = ""
+
+            except socket.error as exc:
+                print ("Caught exception socket.error : %s" % exc)
+
+    def receive_video_func(self):
+        """
+        Listens for video streaming (raw h264) from the Tello.
         Runs as a thread, sets self.frame to the most recent frame Tello captured.
 
         """
@@ -176,12 +128,13 @@ class Tello:
         while 1:
             print("in receive videos")
             try:
-                # res_string, ip = self.socket_video.recvfrom(2048)
-                res_string, ip = self.socket_video.recvfrom(1024)
+                # res_string, ip = self.socket_video.recvfrom(409600)
+                res_string, ip = self.socket_video.recvfrom(2048)
             except Exception as e:
                 print(e)
             print("ip = ", ip)
-            packet_data += res_string
+            packet_data += self.res_string
+            # packet_data.decode()
             # end of frame
             if len(res_string) != 1460:
                 for frame in self._h264_decode(packet_data):
@@ -203,13 +156,10 @@ class Tello:
         for framedata in frames:
             (frame, w, h, ls) = framedata
             if frame is not None:
-                print('frame size %i bytes, w %i, h %i, linesize %i' % (len(frame), w, h, ls))
-
                 frame = np.fromstring(frame, dtype=np.ubyte, count=len(frame), sep='')
                 frame = (frame.reshape((h, ls / 3, 3)))
                 frame = frame[:, :w, :]
                 res_frame_list.append(frame)
-
         return res_frame_list
 
     def send_command(self, command):

@@ -85,7 +85,7 @@ class MainWindow(QtWidgets.QWidget):
         if reply == QtWidgets.QMessageBox.Yes:
             stop_thread(self.control_widget.thread_deal_video)
             stop_thread(self.control_widget.thread_send_command)
-            stop_thread(self.tello_obj.receive_command_thread)
+            stop_thread(self.tello_obj.receive_command_func)
             stop_thread(self.tello_obj.receive_video_thread)
             self.control_widget.stop_event.set()
             del self.tello_obj
