@@ -13,7 +13,7 @@ Tello Scan是一款对Tello无人机进行飞行控制和路径规划软件。�
 ![3d-reconstruction](resources/three_d_reconstruction.png)
 
 ## 二、参考资料
-[1] [tello-video](https://github.com/eclipsequote/tello_video)
+[1] [Tello-Python](https://github.com/dji-sdk/Tello-Python)
 
 ## 三、注意
 目前软件还存在不兼容的问题，可以在python2.7下完成视频流拉取解码，但在python3时不行。而在python2.7下，中央三维显示界面会不正常。
